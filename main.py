@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 Главный файл бота
-Подключаем библиотеки
+Подключаем библиотеки.
 """
 import sys
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
@@ -613,13 +613,23 @@ def croupier():
 
                 # Получаем conversation_id текущей беседы
                 conversation_id = conv.get_conversation_id(x)
-
+                
+                win_bank = trans.get_current_bank(x)
+                
+                # Удаляем транзикции, все транзикции пришедшее после этого момента, попадут в след розыгрыш
+                str_conversations_left = convert_list_to_str(conversations_left)
+                mycursor = dbconnector.cursor()
+                sql = "DELETE FROM `transactions` WHERE `conversation_uid` IN (%s)" % (str_conversations_left)
+                mycursor.execute(sql)
+                dbconnector.commit()
+                mycursor.close()
+                
                 # Выбираем победителя
                 procents_list = []
                 for i in transactions_left_dict:
                     procents_list.append(int(i['procent']))
                 user_win = random.choices(transactions_left_dict, weights=procents_list)
-                win_bank = {'win_bank':trans.get_current_bank(x)}
+                win_bank = {'win_bank':win_bank}
                 user_win[0].update(win_bank)
 
                 # Отнимаем процент от куша
@@ -644,17 +654,7 @@ def croupier():
 
                 message = "Приз забирает %s, вложивший %s коинов!" % (name, digit(round(user_win[0]['count'] / 1000)))
                 vk.messages.send(peer_id=conversation_id, random_id=get_random_id(), keyboard=keyboard.get_keyboard(), message=message, attachment=attachment_data)
-
-
-
-            # Удаляем транзикции, conversation_uid которых равен ^
-            str_conversations_left = convert_list_to_str(conversations_left)
-            mycursor = dbconnector.cursor()
-            sql = "DELETE FROM `transactions` WHERE `conversation_uid` IN (%s)" % (str_conversations_left)
-            mycursor.execute(sql)
-            dbconnector.commit()
-            mycursor.close()
-
+                vk.messages.send(peer_id=conversation_id, random_id=get_random_id(), keyboard=keyboard.get_keyboard(), message= "У вас не осталось койнов? Хочется быть круче остальных? Тогда тебе к нам! \n Низкие и доступные цены! \n Всё автоматически!\n Заходи сюда -> *everyshopvkc(Every Shop)")
 
         # Сбиваем на 0 прошедшие минуты беседам, у которых прошло 5 минут.
         mycursor = dbconnector.cursor()
@@ -662,7 +662,7 @@ def croupier():
         mycursor.execute(sql)
         dbconnector.commit()
         mycursor.close()
-        time.sleep(60)
+        time.sleep(30)
 
 
 """
