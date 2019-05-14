@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 Главный файл бота
-Подключаем библиотеки.
+Подключаем библиотеки
 """
 import sys
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
@@ -517,42 +517,47 @@ def eye():
     """
     vk_session = vk_api.VkApi(token=GROUP_ACCESS_TOKEN)
     vk = vk_session.get_api()
-    
-    @merchant.payment_handler(handler_type='callback')
-    def payment_received(data):
-        print("============================")
-        print("NEW PAYMENT")
-        print(data)
-        print("============================")
-        from_id = data['from_id']
-        amount = data['amount']
-        payload = data['payload']
+    while True:
+        try:
+            @merchant.payment_handler(handler_type='callback')
+            def payment_received(data):
+                print("============================")
+                print("NEW PAYMENT")
+                print(data)
+                print("============================")
+                from_id = data['from_id']
+                amount = data['amount']
+                payload = data['payload']
 
-        # Создаем экземпляр класса бесед и получаем ид текущей беседы для отправки сообщения
-        conv = Conversations(dbconnector)
-        conversation_id = conv.get_conversation_id(payload)
-        min_rate = int(conv.get_min_rate(conversation_id))
-        if (int(amount) < min_rate):
-            pass
-        else:
-            # Если сумма в транзикции больше или равна минимальной ставки в беседе
-            # Создаем экземпляр класса транзакций
-            trans = Transactions(dbconnector) # payload выступает в качестве ида беседы
-            # Добавляем новую транзакцию
-            trans.add_transaction(from_id, payload, amount)
+                # Создаем экземпляр класса бесед и получаем ид текущей беседы для отправки сообщения
+                conv = Conversations(dbconnector)
+                conversation_id = conv.get_conversation_id(payload)
+                min_rate = int(conv.get_min_rate(conversation_id))
+                if (int(amount) < min_rate):
+                    pass
+                else:
+                    # Если сумма в транзикции больше или равна минимальной ставки в беседе
+                    # Создаем экземпляр класса транзакций
+                    trans = Transactions(dbconnector) # payload выступает в качестве ида беседы
+                    # Добавляем новую транзакцию
+                    trans.add_transaction(from_id, payload, amount)
 
-            # Получаем все транзикции и формируем сообщение
-            trans_data = trans.get_current_transactions(payload)
-            trans_dict = trans.transactions_to_dict(trans_data)
-            name = beautiful_name(trans_dict[0]['from_id'], vk)
-            message = "Новый перевод в банк от %s" % (name)
+                    # Получаем все транзикции и формируем сообщение
+                    trans_data = trans.get_current_transactions(payload)
+                    trans_dict = trans.transactions_to_dict(trans_data)
+                    name = beautiful_name(trans_dict[0]['from_id'], vk)
+                    message = "Новый перевод в банк от %s" % (name)
 
-            attachment_data = 'photo-%s_%s' % (GROUP_ID, trans.trans_dict_img(trans_dict, vk))
+                    attachment_data = 'photo-%s_%s' % (GROUP_ID, trans.trans_dict_img(trans_dict, vk))
 
-            vk.messages.send(peer_id=conversation_id, random_id=get_random_id(), keyboard=keyboard.get_keyboard(), message=message, attachment=attachment_data)
+                    vk.messages.send(peer_id=conversation_id, random_id=get_random_id(), keyboard=keyboard.get_keyboard(), message=message, attachment=attachment_data)
 
-    merchant.set_callback_endpoint()
-    merchant.run_callback()
+            merchant.set_callback_endpoint()
+            merchant.run_callback()
+        
+        except:
+            print("\nPayment error!\n")
+            continue
 
 def croupier():
     """
@@ -662,7 +667,7 @@ def croupier():
         mycursor.execute(sql)
         dbconnector.commit()
         mycursor.close()
-        time.sleep(30)
+        time.sleep(60)
 
 
 """
